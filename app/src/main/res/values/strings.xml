@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Ip-test-task</string>
+    <string name="delete_dialog_title">Удаление товара</string>
+    <string name="delete_dialog_text">Вы действительно хотите удалить выбранный товар?</string>
+    <string name="yes_word">Да</string>
+    <string name="no_word">Нет</string>
+    <string name="search_product">Поиск товаров</string>
+    <string name="product_list">Список товаров</string>
+    <string name="count_word">На складе:</string>
+    <string name="date_word">Дата добавления:</string>
+    <string name="dismiss_text">Отмена</string>
+    <string name="confirm_text">Принять</string>
+    <string name="count_products">Количество товара</string>
+</resources>
