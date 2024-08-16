@@ -34,16 +34,21 @@ class MainViewModel(
     private val _queryState: MutableStateFlow<SearchState> = MutableStateFlow(SearchState.Init)
     val queryState: StateFlow<SearchState> get() = _queryState.asStateFlow()
 
-    var currentList: List<ProductItem> = emptyList()
+    private var currentList: List<ProductItem> = emptyList()
+
+    private val _searchFieldText: MutableStateFlow<String> = MutableStateFlow("")
+    val searchFieldText: StateFlow<String> get() = _searchFieldText.asStateFlow()
+
+    private val _filteredProducts: MutableStateFlow<List<ProductItem>> = MutableStateFlow(emptyList())
+    val filteredProducts: StateFlow<List<ProductItem>> get() = _filteredProducts.asStateFlow()
 
     init {
         searchFlow()
     }
 
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun searchFlow() {
         currentSearch
-            .debounce(700L)
             .map { it.trim() }
             .mapLatest { query -> _queryState.emit(SearchState.Success(query)) }
             .launchIn(viewModelScope)
@@ -63,7 +68,9 @@ class MainViewModel(
 
     fun searchProduct(query: String) {
         viewModelScope.launch {
-            _productState.emit(ProductState.Success(searchProductUseCase(query, currentList)))
+            val result = searchProductUseCase(query, currentList)
+            _filteredProducts.emit(result)
+            _productState.emit(ProductState.Success(result))
         }
     }
 
@@ -78,13 +85,21 @@ class MainViewModel(
     fun getAll() {
         viewModelScope.launch {
             getAllItemsUseCase().collect { products ->
-                if (products == emptyList<ProductItem>()) {
+                currentList = products
+
+                if (products.isEmpty()) {
                     _productState.emit(ProductState.Empty)
                 } else {
-                    currentList = products
                     _productState.emit(ProductState.Success(products))
+                    searchProduct(searchFieldText.value)
                 }
             }
+        }
+    }
+
+    fun updateSearchFieldText(newText: String) {
+        viewModelScope.launch {
+            _searchFieldText.emit(newText)
         }
     }
 }

@@ -67,7 +67,6 @@ import com.example.ip_test_task.ui.theme.appBarColor
 import com.example.ip_test_task.ui.theme.cardColors
 import com.example.ip_test_task.ui.theme.dialogColor
 import com.example.ip_test_task.ui.theme.topAppBarColor
-import com.example.ip_test_task.utils.MockData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -98,6 +97,13 @@ class MainActivity : ComponentActivity() {
             productViewModel.getAll()
             collectSearchQuery(this, productViewModel)
             Render(productViewModel)
+
+            val lastQuery by productViewModel.searchFieldText.collectAsState()
+            LaunchedEffect(lastQuery) {
+                if (lastQuery.isNotEmpty()) {
+                    productViewModel.searchProduct(lastQuery)
+                }
+            }
         }
     }
 }
@@ -105,6 +111,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Render(productViewModel: MainViewModel) {
     val state by productViewModel.productState.collectAsState(initial = ProductState.Init)
+    val products by productViewModel.filteredProducts.collectAsState()
 
     when (state) {
         is ProductState.Init -> Unit
@@ -115,23 +122,19 @@ fun Render(productViewModel: MainViewModel) {
 
         is ProductState.Success -> {
             ProductListScreen(
-                products = (state as ProductState.Success).query,
+                products = products,
                 viewModel = productViewModel
             )
         }
 
-        ProductState.Empty -> {
-            LaunchedEffect(Unit) {
-                addMock(productViewModel)
-            }
-        }
+        ProductState.Empty -> Unit
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductListScreen(products: List<ProductItem>, viewModel: MainViewModel) {
-    var productName by remember { mutableStateOf("") }
+    val searchFieldText by viewModel.searchFieldText.collectAsState()
 
     Scaffold(
         topBar = {
@@ -152,11 +155,11 @@ fun ProductListScreen(products: List<ProductItem>, viewModel: MainViewModel) {
                     .padding(8.dp)
             ) {
                 OutlinedTextField(
-                    value = productName,
+                    value = searchFieldText,
                     onValueChange = {
-                        productName = it
+                        viewModel.updateSearchFieldText(it)
                         CoroutineScope(Dispatchers.Default).launch {
-                            viewModel.currentSearch.emit(productName)
+                            viewModel.currentSearch.emit(it)
                         }
                     },
                     label = { Text(stringResource(R.string.search_product)) },
@@ -183,9 +186,10 @@ fun ProductListScreen(products: List<ProductItem>, viewModel: MainViewModel) {
     )
 }
 
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ProductCard(product: ProductItem, onDelete: (ProductItem) -> Unit, viewModel: MainViewModel) {
+private fun ProductCard(product: ProductItem, onDelete: (ProductItem) -> Unit, viewModel: MainViewModel) {
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     val dateAdded = sdf.format(Date(product.time))
 
@@ -408,11 +412,5 @@ private fun collectSearchQuery(context: MainActivity, viewModel: MainViewModel) 
                 }
             }
         }
-    }
-}
-
-private fun addMock(viewModel: MainViewModel) {
-    MockData.products.forEach { product ->
-        viewModel.insert(product)
     }
 }
